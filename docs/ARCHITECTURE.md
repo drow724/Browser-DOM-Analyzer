@@ -28,6 +28,7 @@ DOM 읽기는 synchronous snapshot입니다. 요소마다 필요한 computed sty
 | `src/privacy/sanitize.ts` | value-free 정책·text/URL 정제·private 영역 |
 | `src/styles/` | CSS allowlist·canonical serialization·exact dedup |
 | `src/model/SiteDOMModel.ts` | 공개 schema |
+| `src/runtime/DOMSnapshot.ts` | browser-only NodeId ↔ Element binding 및 stale lifecycle |
 
 ## Schema 결정
 
@@ -42,6 +43,14 @@ DOM 읽기는 synchronous snapshot입니다. 요소마다 필요한 computed sty
 - **scopes:** document 및 open-shadow host 경계를 기록합니다. slot에 배치된 light node는 **composed 위치의 shadow scope**를 사용합니다. 이는 원래 DOM 소유권 표가 아닙니다. slot 요소를 유지하여 삽입 위치를 해석할 수 있게 합니다.
 - **boundary:** open shadow 표시와 iframe의 not-traversed 상태. closed shadow의 존재를 일반 script에서 검출할 수 없으므로 존재를 추측하여 표시하지 않습니다.
 - **StyleDescriptor:** CSS property 이름 → normalized computed string. side별 margin/padding/border/radius, typography, colors, shadow, cursor, stacking, flex alignment를 보존합니다. shorthand만 저장할 때 생기는 비대칭 정보 손실을 피합니다. URL/content/custom properties를 수집하지 않습니다. browser computed serialization만 정규화하고 색상을 임의로 반올림·군집화하지 않습니다.
+
+### Runtime binding
+
+`analyzeDOM()`은 기존처럼 JSON-serializable `SiteDOMModel`만 반환합니다. `createDOMSnapshot()`은 같은 분석 경로에서 **포함된 노드만** `Map<NodeId, Element>`와 `WeakMap<Element, NodeId>`에 연결합니다. 전자는 resolve를 위해 snapshot 생명주기 동안 Element를 강하게 보유하므로 `dispose()`에서 clear하고, 후자는 reverse lookup key를 불필요하게 강하게 보유하지 않습니다.
+
+`SiteNode.structure.parentId`는 wrapper collapse 이후의 logical parent입니다. 실제 physical DOM parent는 selector/path를 재구성하지 않고 `snapshot.resolve(nodeId)?.parentElement`에서 얻습니다. MutationObserver는 snapshot을 갱신하지 않고 mutation 발생 시 stale만 표시하여 immutable snapshot 계약을 유지합니다.
+
+NodeId는 snapshot-local ordinal입니다. 별도 snapshot의 같은 `n143`은 동일 Element를 의미하지 않습니다. persistent identity/revision은 후속 단계에서 별도로 설계합니다.
 
 모델은 후속 semantic 처리의 입력이지 바로 LLM prompt로 전송할 최종 token format은 아닙니다. JSON key 반복 비용이 있으므로 element 수 감소가 byte/token 수의 동일 비율 감소를 보장하지 않습니다.
 
@@ -63,3 +72,12 @@ same-origin iframe를 지금 병합하면 별도 viewport, frame border/transfor
 6. **ID 안정성:** 영구 DOM identity와 snapshot ordinal을 구분하는 resolver를 설계합니다. 현재 model ID를 미래 DOM mutation target으로 직접 사용하지 않습니다.
 
 행동 관찰·intent·LLM planner·UI Action AST·safe mutation runtime은 그 이후 별도 단계입니다.
+
+
+## Phase 1.1 hardening notes
+
+- blocked/private subtree는 style/layout read 전에 가능한 범위에서 차단하며 runtime binding도 생성하지 않습니다.
+- anonymous wrapper collapse는 flex/grid/position뿐 아니라 min/max dimensions, overflow, contain, aspect-ratio, transform 같은 layout signal도 고려합니다.
+- URL을 포함할 수 있는 background-image 값은 기존 allowlist의 URL 필터로 직렬화하지 않습니다.
+- geometry opt-out은 이번 단계에서 넣지 않았습니다. visibility와 zero-box 판단 자체가 bounding rect에 의존하므로 단순 출력 생략만으로 layout read 비용을 제거하지 못합니다.
+- package는 여전히 private이며 프로젝트 자체 LICENSE는 repository owner가 별도로 결정해야 합니다.

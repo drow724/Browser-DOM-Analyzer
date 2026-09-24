@@ -1,4 +1,4 @@
-import type { SiteDOMModel, SiteNode } from '../model/SiteDOMModel.js';
+import type { NodeId, SiteDOMModel, SiteNode } from '../model/SiteDOMModel.js';
 import { traverseDOM } from '../traversal/traverseDOM.js';
 import { defaultFilter, blockedTags, type FilterPolicy } from '../filtering/noiseFilter.js';
 import { visibility } from '../filtering/visibility.js';
@@ -16,9 +16,22 @@ export interface AnalyzeOptions {
   privacy?: PrivacyOptions;
   filter?: FilterPolicy;
 }
+export interface AnalysisRuntimeBindings {
+  readonly nodeById: Map<NodeId, Element>;
+  readonly idByElement: WeakMap<Element, NodeId>;
+}
 interface WalkState { parentId?: string; blocked: boolean; textOwned: boolean; inert: boolean; ariaHidden: boolean; scopeId: string }
-/** Synchronous read-only snapshot of a live Document. No observers, listeners, network, storage or DOM writes. */
+interface InternalAnalysisResult { model: SiteDOMModel; bindings?: AnalysisRuntimeBindings }
+/** Synchronous read-only serialized snapshot of a live Document. */
 export function analyzeDOM(document: Document, options: AnalyzeOptions = {}): SiteDOMModel {
+  return analyzeDOMInternal(document, options, false).model;
+}
+/** Internal browser-runtime variant used by DOMSnapshot. */
+export function analyzeDOMWithBindings(document: Document, options: AnalyzeOptions = {}): { model: SiteDOMModel; bindings: AnalysisRuntimeBindings } {
+  const result = analyzeDOMInternal(document, options, true);
+  return { model: result.model, bindings: result.bindings! };
+}
+function analyzeDOMInternal(document: Document, options: AnalyzeOptions, captureBindings: boolean): InternalAnalysisResult {
   const win = document.defaultView;
   if (!win || !document.documentElement) throw new TypeError('analyzeDOM requires a live browser Document');
   const maxText = options.maxTextLength ?? 240;
@@ -31,6 +44,9 @@ export function analyzeDOM(document: Document, options: AnalyzeOptions = {}): Si
   const start = win.performance.now();
   const viewport = { width: win.innerWidth, height: win.innerHeight, scrollX: win.scrollX, scrollY: win.scrollY, devicePixelRatio: win.devicePixelRatio };
   const registry = new StyleRegistry();
+  const bindings: AnalysisRuntimeBindings | undefined = captureBindings
+    ? { nodeById: new Map<NodeId, Element>(), idByElement: new WeakMap<Element, NodeId>() }
+    : undefined;
   const model: SiteDOMModel = {
     version: '0.1.0', url: sanitizeURL(document.URL, document.URL, privacy.urlMode) ?? '', viewport,
     coordinateSpace: 'viewport-css-px', rootId: 'n1', nodes: {}, scopes: { document: { kind: 'document' } },
@@ -98,6 +114,10 @@ export function analyzeDOM(document: Document, options: AnalyzeOptions = {}): Si
     if (el.localName === 'iframe') node.boundary = { iframe: 'not-traversed' };
     model.nodes[id] = node;
     if (state.parentId) model.nodes[state.parentId]!.structure.childrenIds.push(id);
+    if (bindings) {
+      bindings.nodeById.set(id, el);
+      bindings.idByElement.set(el, id);
+    }
     state.parentId = id;
     state.textOwned ||= ownTextOwner && Boolean(semantic.text);
   }
@@ -106,5 +126,5 @@ export function analyzeDOM(document: Document, options: AnalyzeOptions = {}): Si
   model.stats.uniqueStyles = Object.keys(registry.styles).length;
   model.stats.scanDurationMs = Math.round((win.performance.now() - start) * 100) / 100;
   if (options.styles !== false) model.styles = registry.styles;
-  return model;
+  return bindings ? { model, bindings } : { model };
 }

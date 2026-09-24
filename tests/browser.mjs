@@ -1,4 +1,4 @@
-import { analyzeDOM, defaultFilter } from '../dist/index.js';
+import { analyzeDOM, createDOMSnapshot, defaultFilter } from '../dist/index.js';
 const report={passed:0,failed:0,tests:[],benchmarks:[],userAgent:navigator.userAgent};
 const assert=(x,msg)=>{if(!x)throw new Error(msg)}, all=m=>Object.values(m.nodes), text=(m,t)=>all(m).find(n=>n.semantic.text===t);
 function validate(m){
@@ -35,6 +35,20 @@ await test('determinism, exact styles, opt-out, no DOM mutations',()=>using('pro
  const observer=new MutationObserver(()=>{});observer.observe(d,{subtree:true,attributes:true,childList:true,characterData:true});const a=analyzeDOM(d),b=analyzeDOM(d);const changes=observer.takeRecords();observer.disconnect();assert(!changes.length,'DOM writes');
  a.stats.scanDurationMs=b.stats.scanDurationMs=0;assert(JSON.stringify(a)===JSON.stringify(b),'deterministic');const buttons=all(a).filter(n=>n.identity.tag==='button');assert(buttons[0].design.styleRef===buttons[1].design.styleRef,'dedup');
  const m=analyzeDOM(d,{styles:false});assert(!m.styles&&m.stats.uniqueStyles===0&&all(m).every(n=>!n.design),'styles opt out');
+}));
+await test('snapshot: resolve, reverse lookup, logical/physical parent and serialization',()=>using('product',d=>{
+ const snapshot=createDOMSnapshot(d),m=snapshot.model;validate(m);const buy=text(m,'구매하기'),button=d.querySelector('#buy');
+ assert(snapshot.resolve(buy.id)===button,'resolve');assert(snapshot.getNodeId(button)===buy.id,'reverse');
+ assert(m.nodes[buy.structure.parentId].identity.tag==='main','logical parent');assert(button.parentElement.localName!=='main','physical parent');
+ assert(JSON.stringify(m).includes('구매하기'),'serializable');snapshot.dispose();assert(snapshot.resolve(buy.id)===null,'disposed');
+}));
+await test('snapshot: mutations stale and detached elements disconnect',()=>using('product',d=>{
+ const snapshot=createDOMSnapshot(d),button=d.querySelector('#buy'),id=snapshot.getNodeId(button);assert(id,'bound');
+ assert(!snapshot.isStale(),'fresh');button.remove();assert(snapshot.isStale(),'stale');assert(!snapshot.isConnected(id),'detached');snapshot.dispose();
+}));
+await test('snapshot: private excluded nodes never receive bindings',()=>using('product',d=>{
+ const area=d.createElement('div');area.setAttribute('data-private','');const button=d.createElement('button');button.textContent='PRIVATE_BINDING';area.append(button);d.body.append(area);
+ const snapshot=createDOMSnapshot(d);assert(snapshot.getNodeId(button)===undefined,'private binding');assert(!JSON.stringify(snapshot.model).includes('PRIVATE_BINDING'),'private serialized');snapshot.dispose();
 }));
 await test('budget, custom filter, privacy hooks, identity opt-in',()=>using('product',d=>{
  const tiny=analyzeDOM(d,{maxElements:8});validate(tiny);assert(tiny.coverage.truncated&&tiny.stats.scannedElements===8,'budget');
