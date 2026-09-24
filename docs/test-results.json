@@ -1,0 +1,86 @@
+{
+  "passed": 13,
+  "failed": 0,
+  "tests": [
+    {
+      "name": "product: semantic roles, labels, reparenting, no duplicate child text",
+      "status": "passed"
+    },
+    {
+      "name": "form: values, editable content, private subtree and state excluded",
+      "status": "passed"
+    },
+    {
+      "name": "nested: anonymous wrappers collapse, grid/card retained",
+      "status": "passed"
+    },
+    {
+      "name": "visibility: overrides, offscreen, hidden helper, boxless parent, SVG",
+      "status": "passed"
+    },
+    {
+      "name": "shadow: nested open roots, slots, scope names, closed root ignored",
+      "status": "passed"
+    },
+    {
+      "name": "iframe: same and opaque origins recorded as boundaries",
+      "status": "passed"
+    },
+    {
+      "name": "determinism, exact styles, opt-out, no DOM mutations",
+      "status": "passed"
+    },
+    {
+      "name": "budget, custom filter, privacy hooks, identity opt-in",
+      "status": "passed"
+    },
+    {
+      "name": "never reads control value getters; IDREF cannot leak textarea",
+      "status": "passed"
+    },
+    {
+      "name": "interaction evidence, inert, tabindex, URL redaction",
+      "status": "passed"
+    },
+    {
+      "name": "privacy through labels/shadow; nested helper and content-visibility",
+      "status": "passed"
+    },
+    {
+      "name": "limits and structural root when whole document is hidden",
+      "status": "passed"
+    },
+    {
+      "name": "large fixture: invariants, compression and measured benchmark",
+      "status": "passed"
+    }
+  ],
+  "benchmarks": [
+    {
+      "fixture": "1000 product cards",
+      "physicalDocumentElements": 5014,
+      "scannedElements": 5014,
+      "includedElements": 2009,
+      "ignoredElements": 3005,
+      "uniqueStyles": 7,
+      "scanDurationMs": 165.7,
+      "runsMs": [
+        149.8,
+        205.5,
+        161.8,
+        168.7,
+        165.7
+      ],
+      "jsonBytes": 1039784
+    }
+  ],
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+  "verificationMethod": "Browser test page executed in actual embedded Chromium; JSON observed via native accessibility UI, transcribed into this report. Standalone Chrome 153 CLI startup timed out.",
+  "benchmarkPage": {
+    "scannedElements": 7031,
+    "includedElements": 5007,
+    "ignoredElements": 2024,
+    "uniqueStyles": 12,
+    "scanDurationMs": 297.1
+  }
+}

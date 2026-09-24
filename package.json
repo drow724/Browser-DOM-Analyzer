@@ -1,0 +1,29 @@
+{
+  "name": "site-dom-model",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Read-only browser-native compact DOM snapshots",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "docs"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test tests/unit.test.mjs",
+    "serve": "python3 -m http.server 4173 --bind 127.0.0.1",
+    "test:browser": "npm run build && python3 scripts/browser_test.py",
+    "test:all": "npm test && npm run test:browser"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

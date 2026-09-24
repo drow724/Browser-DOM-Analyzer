@@ -1,0 +1,6 @@
+<!doctype html><html><head><title>Shadow fixture</title></head><body><open-card><button slot="action">Slotted buy</button><span>UNASSIGNED_LIGHT</span></open-card><closed-card></closed-card><script>
+const open = document.querySelector('open-card').attachShadow({mode:'open'});
+open.innerHTML = '<section><h2>Shadow title</h2><slot name="action"><button>UNUSED_FALLBACK</button></slot><button aria-labelledby="shadow-label">?</button><span id="shadow-label" hidden>Shadow label</span><nested-card></nested-card></section>';
+open.querySelector('nested-card').attachShadow({mode:'open'}).innerHTML='<button>Nested shadow action</button>';
+document.querySelector('closed-card').attachShadow({mode:'closed'}).innerHTML='<button>CLOSED_SHADOW_SECRET</button>';
+</script></body></html>
