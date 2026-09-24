@@ -1,4 +1,4 @@
-# Site DOM Model — Phase 1
+# Site DOM Model — Phase 1.1
 
 브라우저의 현재 문서를 읽어 의미·상호작용·레이아웃·스타일을 구조화하는 TypeScript 라이브러리입니다. 런타임 의존성 없이 DOM API만 사용합니다. LLM, 네트워크 요청, 행동 수집, storage 접근, DOM 변경, observer 설치는 없습니다.
 
@@ -35,6 +35,23 @@ npm run serve
 ```
 
 ## API
+
+기존 serialized API는 그대로 유지됩니다. 실제 DOM mutation target과 연결해야 할 때만 runtime snapshot을 사용합니다.
+
+```ts
+import { createDOMSnapshot } from './dist/index.js';
+
+const snapshot = createDOMSnapshot(document);
+const model = snapshot.model;
+const element = snapshot.resolve('n143');
+const nodeId = element ? snapshot.getNodeId(element) : undefined;
+
+snapshot.isConnected(nodeId ?? '');
+snapshot.isStale();
+snapshot.dispose();
+```
+
+`SiteDOMModel`에는 live Element가 포함되지 않습니다. `parentId`는 wrapper collapse 이후의 logical parent이고 실제 physical parent는 `snapshot.resolve(nodeId)?.parentElement`로 확인합니다. NodeId는 snapshot-local이며 다른 snapshot의 같은 ID와 동일한 DOM identity를 뜻하지 않습니다.
 
 ```ts
 const model = analyzeDOM(document, {
@@ -86,3 +103,8 @@ const model = analyzeDOM(document, {
 - [실제 테스트 결과 JSON](docs/test-results.json)
 
 최종 TypeScript schema는 `src/model/SiteDOMModel.ts`, 진입점은 `src/index.ts`입니다. 테스트/벤치마크 페이지는 fixture와 결과 표시를 위해 DOM을 변경하지만 **라이브러리 분석 함수는 읽기 전용**입니다.
+
+
+## Package / license status
+
+현재 이 repository 자체의 배포 라이선스는 선택되지 않았고 `package.json`의 `private: true`도 유지합니다. `docs/research-licenses/`는 참고 프로젝트의 라이선스 사본이지 이 프로젝트의 라이선스가 아닙니다. 공개 npm/오픈소스 배포 전에 repository owner가 라이선스와 package 공개 정책을 명시적으로 선택해야 합니다.
